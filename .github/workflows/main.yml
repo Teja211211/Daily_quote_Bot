@@ -1,4 +1,3 @@
-```yaml
 name: Daily Quote Sender
 
 on:
@@ -10,29 +9,27 @@ jobs:
   send-quote:
     runs-on: ubuntu-latest
     steps:
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
       - name: Send Daily Quote
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
           QUOTE_DATA=$(curl -s "https://api.quotable.io/random")
-          QUOTE_TEXT=$(echo $QUOTE_DATA | jq -r '.content')
-          QUOTE_AUTHOR=$(echo $QUOTE_DATA | jq -r '.author')
-          
-          MESSAGE="🌅 *Good Morning!*
+          QUOTE_TEXT=$(echo "$QUOTE_DATA" | jq -r '.content')
+          QUOTE_AUTHOR=$(echo "$QUOTE_DATA" | jq -r '.author')
 
-          🌸 _Your Daily Inspiration_ 🌸
+          MESSAGE=$(printf "🌅 *Good Morning!*\\n\\n🌸 _Your Daily Inspiration_ 🌸\\n\\n💭 \"%s\"\\n\\n✨ *— %s*\\n\\n🌻 Have a beautiful day ahead! 🌻" "$QUOTE_TEXT" "$QUOTE_AUTHOR")
 
-          💭 \"$QUOTE_TEXT\"
+          JSON_PAYLOAD=$(jq -n \
+                          --arg chat_id "$CHAT_ID" \
+                          --arg text "$MESSAGE" \
+                          '{chat_id: $chat_id, text: $text, parse_mode: "Markdown"}')
 
-          ✨ *— $QUOTE_AUTHOR*
-
-          🌻 Have a beautiful day ahead! 🌻"
-          
-          curl -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"chat_id\": \"${{ secrets.CHAT_ID }}\",
-              \"text\": \"$MESSAGE\",
-              \"parse_mode\": \"Markdown\"
-            }"
-          
+            -d "$JSON_PAYLOAD"
+
           echo "Quote sent successfully!"
-```
