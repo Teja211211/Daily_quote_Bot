@@ -9,31 +9,30 @@ on:
 jobs:
   send-quote:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Send Daily Quote
-      run: |
-        QUOTE_DATA=$(curl -s "https://api.quotable.io/random")
-        QUOTE_TEXT=$(echo $QUOTE_DATA | jq -r '.content')
-        QUOTE_AUTHOR=$(echo $QUOTE_DATA | jq -r '.author')
-        
-        MESSAGE="🌅 *Good Morning!*
+      - name: Send Daily Quote
+        run: |
+          QUOTE_DATA=$(curl -s "https://api.quotable.io/random")
+          QUOTE_TEXT=$(echo $QUOTE_DATA | jq -r '.content')
+          QUOTE_AUTHOR=$(echo $QUOTE_DATA | jq -r '.author')
+          
+          MESSAGE="🌅 *Good Morning!*
 
-        🌸 _Your Daily Inspiration_ 🌸
+          🌸 _Your Daily Inspiration_ 🌸
 
-        💭 \"$QUOTE_TEXT\"
+          💭 \"$QUOTE_TEXT\"
 
-        ✨ *— $QUOTE_AUTHOR*
+          ✨ *— $QUOTE_AUTHOR*
 
-        🌻 Have a beautiful day ahead! 🌻"
-        
-        curl -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
-          -H "Content-Type: application/json" \
-          -d "{
-            \"chat_id\": \"${{ secrets.CHAT_ID }}\",
-            \"text\": \"$MESSAGE\",
-            \"parse_mode\": \"Markdown\"
-          }"
-        
-        echo "Quote sent successfully!"
+          🌻 Have a beautiful day ahead! 🌻"
+          
+          curl -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${{ secrets.CHAT_ID }}\",
+              \"text\": \"$MESSAGE\",
+              \"parse_mode\": \"Markdown\"
+            }"
+          
+          echo "Quote sent successfully!"
 ```
