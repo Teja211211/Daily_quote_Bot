@@ -9,8 +9,9 @@ jobs:
   send-quote:
     runs-on: ubuntu-latest
     steps:
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Install Dependencies
+        # Update package lists and install jq and ca-certificates
+        run: sudo apt-get update && sudo apt-get install -y jq ca-certificates
 
       - name: Send Daily Quote
         env:
