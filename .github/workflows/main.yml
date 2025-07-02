@@ -2,6 +2,7 @@ name: Daily Quote Sender
 
 on:
   schedule:
+    # Runs at 1:30 AM UTC every day (7:00 AM IST)
     - cron: '30 1 * * *'
   workflow_dispatch:
 
@@ -10,27 +11,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Dependencies
-        # Update package lists and install jq and ca-certificates
-        run: sudo apt-get update && sudo apt-get install -y jq ca-certificates
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq curl
 
-      - name: Send Daily Quote
+      - name: Fetch and Send Daily Quote
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          QUOTE_DATA=$(curl -s "https://api.quotable.io/random")
-          QUOTE_TEXT=$(echo "$QUOTE_DATA" | jq -r '.content')
-          QUOTE_AUTHOR=$(echo "$QUOTE_DATA" | jq -r '.author')
-
+          # Fetch a random quote
+          QUOTE_RESPONSE=$(curl -s "https://api.quotable.io/random")
+          
+          # Check if the API call was successful
+          if [ -z "$QUOTE_RESPONSE" ]; then
+            echo "Error: Failed to fetch quote from the API."
+            exit 1
+          fi
+          
+          # Extract quote and author safely
+          QUOTE_TEXT=$(echo "$QUOTE_RESPONSE" | jq -r '.content')
+          QUOTE_AUTHOR=$(echo "$QUOTE_RESPONSE" | jq -r '.author')
+          
+          # Construct the message text
           MESSAGE=$(printf "🌅 *Good Morning!*\\n\\n🌸 _Your Daily Inspiration_ 🌸\\n\\n💭 \"%s\"\\n\\n✨ *— %s*\\n\\n🌻 Have a beautiful day ahead! 🌻" "$QUOTE_TEXT" "$QUOTE_AUTHOR")
-
+          
+          # Create the JSON payload for Telegram API
           JSON_PAYLOAD=$(jq -n \
                           --arg chat_id "$CHAT_ID" \
                           --arg text "$MESSAGE" \
-                          '{chat_id: $chat_id, text: $text, parse_mode: "Markdown"}')
-
-          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+                          '{chat_id: $chat_id, text: $text, parse_mode: "MarkdownV2"}')
+                          
+          # Send the message to Telegram
+          RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "$JSON_PAYLOAD"
+            -d "$JSON_PAYLOAD")
 
-          echo "Quote sent successfully!"
+          # Check the response from Telegram API
+          if [ "$RESPONSE_CODE" -eq 200 ]; then
+            echo "Quote sent successfully!"
+          else
+            echo "Error: Failed to send quote. Telegram API responded with code $RESPONSE_CODE."
+            # Optionally, log the full response for debugging
+            curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "$JSON_PAYLOAD"
+            exit 1
+          fi
