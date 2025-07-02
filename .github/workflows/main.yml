@@ -12,15 +12,16 @@ jobs:
     steps:
       - name: Install Dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y jq curl
+          sudo apt-get update
+          sudo apt-get install -y jq curl ca-certificates
 
       - name: Fetch and Send Daily Quote
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: |
-          # Fetch a random quote
-          QUOTE_RESPONSE=$(curl -s "https://api.quotable.io/random")
+          # Fetch a random quote using the system's CA bundle
+          QUOTE_RESPONSE=$(curl --cacert /etc/ssl/certs/ca-certificates.crt -s "https://api.quotable.io/random")
           
           # Check if the API call was successful
           if [ -z "$QUOTE_RESPONSE" ]; then
@@ -51,7 +52,6 @@ jobs:
             echo "Quote sent successfully!"
           else
             echo "Error: Failed to send quote. Telegram API responded with code $RESPONSE_CODE."
-            # Optionally, log the full response for debugging
             curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
               -H "Content-Type: application/json" \
               -d "$JSON_PAYLOAD"
